@@ -1,7 +1,7 @@
 package org.datasyslab.geospark.showcase;
 
 /**
- * 
+ *
  * @author Arizona State University DataSystems Lab
  *
  */
@@ -11,6 +11,7 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.spark.SparkConf;
@@ -19,38 +20,40 @@ import org.apache.spark.storage.StorageLevel;
 import org.datasyslab.geospark.spatialOperator.JoinQuery;
 import org.datasyslab.geospark.spatialOperator.KNNQuery;
 import org.datasyslab.geospark.spatialOperator.RangeQuery;
+import org.datasyslab.geospark.spatialRDD.PointRDD;
 import org.datasyslab.geospark.spatialRDD.RectangleRDD;
+
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
 
 public class Example implements Serializable{
-    public static JavaSparkContext sc;
-    static GeometryFactory fact=new GeometryFactory();
-    static String cores;
-    
-    static Properties prop;
-    static String queryName;
-    static InputStream input;
-    
-    static String inputLocation;
-    static Integer offset;
-    static String splitter;
-    static Integer numPartitions;
-    
-    static String inputLocation2;
-    static Integer offset2;
-    static String splitter2;
-    static String gridType="";
-    static int numPartitions2;
-    
-    static int loopTimes;
-    static Point queryPoint;
-    static Envelope queryEnvelope;
-    static SparkConf conf;
-    static String masterName;
-    static String jarPath;
+	public static JavaSparkContext sc;
+	static GeometryFactory fact=new GeometryFactory();
+	static String cores;
+
+	static Properties prop;
+	static String queryName;
+	static InputStream input;
+
+	static String inputLocation;
+	static Integer offset;
+	static String splitter;
+	static Integer numPartitions;
+
+	static String inputLocation2;
+	static Integer offset2;
+	static String splitter2;
+	static String gridType="";
+	static int numPartitions2;
+
+	static int loopTimes;
+	static Point queryPoint;
+	static Envelope queryEnvelope;
+	static SparkConf conf;
+	static String masterName;
+	static String jarPath;
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
@@ -69,7 +72,7 @@ public class Example implements Serializable{
 		if(args.length>9)
 		{
 			inputLocation2=args[9];
-			offset2=Integer.parseInt(args[10]);			
+			offset2=Integer.parseInt(args[10]);
 			splitter2=args[11];
 			numPartitions2=Integer.parseInt(args[12]);
 			gridType=args[13];
@@ -94,127 +97,145 @@ public class Example implements Serializable{
 				.set("log4j.rootCategory","ERROR, console");
 		sc = new JavaSparkContext(conf);
 		sc.addJar(jarPath);
-        Logger.getLogger("org").setLevel(Level.WARN);
-        Logger.getLogger("akka").setLevel(Level.WARN);
-		
+		Logger.getLogger("org").setLevel(Level.WARN);
+		Logger.getLogger("akka").setLevel(Level.WARN);
+
 		try {
-		switch(queryName)
-		{
-		case "pointrange":
-			testSpatialRangeQuery();
-			break;
-		case "pointrangeindex":
-			testSpatialRangeQueryUsingIndex();
-			break;
-		case "pointknn":
-			testSpatialKnnQuery();
-			break;
-		case "pointknnindex":
-			testSpatialKnnQueryUsingIndex();
-			break;
-		case "pointjoin":
-			testSpatialJoinQuery();
-			break;
-		case "pointjoinindex":
-			testSpatialJoinQueryUsingIndex();
-			break;
-		default:
-            throw new Exception("Query type is not recognized, ");
-		}			
+			switch(queryName)
+			{
+				case "pointrange":
+					testSpatialRangeQuery();
+					break;
+				case "pointrangeindex":
+					testSpatialRangeQueryUsingIndex();
+					break;
+				case "pointknn":
+					testSpatialKnnQuery();
+					break;
+				case "pointknnindex":
+					testSpatialKnnQueryUsingIndex();
+					break;
+				case "pointjoin":
+					testSpatialJoinQuery();
+					break;
+				case "pointjoinindex":
+					testSpatialJoinQueryUsingIndex();
+					break;
+				case "cartesianjoin":
+					testSpatialJoinQueryUsingCartesianProduct();
+					break;
+				default:
+					throw new Exception("Query type is not recognized, ");
+			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		TearDown();
 	}
-    public static void testSpatialRangeQuery() throws Exception {
-    	Random random=new Random();
-    	double randomNumber=random.nextInt(10)+random.nextDouble();
-    	queryEnvelope=new Envelope (-90.01+randomNumber,-80.01+randomNumber,30.01+randomNumber,40.01+randomNumber);
-    	RectangleRDD objectRDD = new RectangleRDD(sc, inputLocation, offset, splitter);
-    	objectRDD.rawRectangleRDD.persist(StorageLevel.MEMORY_ONLY());
-    	for(int i=0;i<loopTimes;i++)
-    	{
-    		long resultSize = RangeQuery.SpatialRangeQuery(objectRDD, queryEnvelope, 0).getRawRectangleRDD().count();
-    		assert resultSize>-1;
-    	}
-    }
-    
+	public static void testSpatialRangeQuery() throws Exception {
+		Random random=new Random();
+		double randomNumber=random.nextInt(10)+random.nextDouble();
+		queryEnvelope=new Envelope (-90.01+randomNumber,-80.01+randomNumber,30.01+randomNumber,40.01+randomNumber);
+		RectangleRDD objectRDD = new RectangleRDD(sc, inputLocation, offset, splitter);
+		objectRDD.rawRectangleRDD.persist(StorageLevel.MEMORY_ONLY());
+		for(int i=0;i<loopTimes;i++)
+		{
+			long resultSize = RangeQuery.SpatialRangeQuery(objectRDD, queryEnvelope, 0).getRawRectangleRDD().count();
+			assert resultSize>-1;
+		}
+	}
 
-    
-    public static void testSpatialRangeQueryUsingIndex() throws Exception {
-    	Random random=new Random();
-    	double randomNumber=random.nextInt(10)+random.nextDouble();
-    	queryEnvelope=new Envelope (-90.01+randomNumber,-80.01+randomNumber,30.01+randomNumber,40.01+randomNumber);
-    	RectangleRDD objectRDD = new RectangleRDD(sc, inputLocation, offset, splitter);
-    	objectRDD.buildIndex("rtree");
-    	for(int i=0;i<loopTimes;i++)
-    	{
-    		long resultSize = RangeQuery.SpatialRangeQueryUsingIndex(objectRDD, queryEnvelope, 0).getRawRectangleRDD().count();
-    		assert resultSize>-1;
-    	}
-        
-    }
 
-    public static void testSpatialKnnQuery() throws Exception {
-    	Random random=new Random();
-    	double randomNumber=random.nextInt(10)+random.nextDouble();
-    	queryPoint=fact.createPoint(new Coordinate(-84.01+randomNumber, 34.01+randomNumber));
-    	RectangleRDD objectRDD = new RectangleRDD(sc, inputLocation, offset, splitter);
-    	objectRDD.getRawRectangleRDD().persist(StorageLevel.MEMORY_ONLY());
-    	for(int i=0;i<loopTimes;i++)
-    	{
-    		List<Envelope> result = KNNQuery.SpatialKnnQuery(objectRDD, queryPoint, 1000);
-    		assert result.size()>-1;
-    	}
-    }
 
-    public static void testSpatialKnnQueryUsingIndex() throws Exception {
-    	Random random=new Random();
-    	double randomNumber=random.nextInt(10)+random.nextDouble();
-    	queryPoint=fact.createPoint(new Coordinate(-84.01+randomNumber, 34.01+randomNumber));
-    	RectangleRDD objectRDD = new RectangleRDD(sc, inputLocation, offset, splitter);
-    	objectRDD.buildIndex("rtree");
-    	for(int i=0;i<loopTimes;i++)
-    	{
-    		List<Envelope> result = KNNQuery.SpatialKnnQueryUsingIndex(objectRDD, queryPoint, 1000);
-    		assert result.size()>-1;
-    	}
-    }
- 
-    public static void testSpatialJoinQuery() throws Exception {
-    	RectangleRDD rectangleRDD = new RectangleRDD(sc, inputLocation2, offset2, splitter2);
-    	//polygonRDD.rawPolygonRDD.unpersist();
-    	RectangleRDD objectRDD;
-    	objectRDD = new RectangleRDD(sc, inputLocation, offset ,splitter,gridType,numPartitions);
-    	objectRDD.gridRectangleRDD.persist(StorageLevel.MEMORY_ONLY());
-    	JoinQuery joinQuery = new JoinQuery(sc,objectRDD,rectangleRDD); 
-    	for(int i=0;i<loopTimes;i++)
-    	{
-    		
-    		long resultSize = joinQuery.SpatialJoinQuery(objectRDD,rectangleRDD).count();
-    		assert resultSize>0;
-    	}
-    }
-    
-    public static void testSpatialJoinQueryUsingIndex() throws Exception {
-    	RectangleRDD rectangleRDD = new RectangleRDD(sc, inputLocation2, offset2, splitter2);
-    	//polygonRDD.rawPolygonRDD.unpersist();
-    	RectangleRDD objectRDD;
-  	objectRDD = new RectangleRDD(sc, inputLocation, offset ,splitter,gridType,numPartitions);
-    	objectRDD.buildIndex("rtree");
-    	JoinQuery joinQuery = new JoinQuery(sc,objectRDD,rectangleRDD);
-    	for(int i=0;i<loopTimes;i++)
-    	{
-    		long resultSize = joinQuery.SpatialJoinQueryUsingIndex(objectRDD,rectangleRDD).count();
-    		assert resultSize>0;
-    	}
-    }
-    
+	public static void testSpatialRangeQueryUsingIndex() throws Exception {
+		Random random=new Random();
+		double randomNumber=random.nextInt(10)+random.nextDouble();
+		queryEnvelope=new Envelope (-90.01+randomNumber,-80.01+randomNumber,30.01+randomNumber,40.01+randomNumber);
+		RectangleRDD objectRDD = new RectangleRDD(sc, inputLocation, offset, splitter);
+		objectRDD.buildIndex("rtree");
+		for(int i=0;i<loopTimes;i++)
+		{
+			long resultSize = RangeQuery.SpatialRangeQueryUsingIndex(objectRDD, queryEnvelope, 0).getRawRectangleRDD().count();
+			assert resultSize>-1;
+		}
 
-    public static void TearDown() {
-        sc.stop();
-    }
+	}
+
+	public static void testSpatialKnnQuery() throws Exception {
+		Random random=new Random();
+		double randomNumber=random.nextInt(10)+random.nextDouble();
+		queryPoint=fact.createPoint(new Coordinate(-84.01+randomNumber, 34.01+randomNumber));
+		RectangleRDD objectRDD = new RectangleRDD(sc, inputLocation, offset, splitter);
+		objectRDD.getRawRectangleRDD().persist(StorageLevel.MEMORY_ONLY());
+		for(int i=0;i<loopTimes;i++)
+		{
+			List<Envelope> result = KNNQuery.SpatialKnnQuery(objectRDD, queryPoint, 1000);
+			assert result.size()>-1;
+		}
+	}
+
+	public static void testSpatialJoinQueryUsingCartesianProduct() throws Exception {
+		RectangleRDD rectangleRDD = new RectangleRDD(sc, inputLocation2, offset2, splitter2);
+		//polygonRDD.rawPolygonRDD.unpersist();
+		PointRDD objectRDD;
+		objectRDD = new PointRDD(sc, inputLocation, offset ,splitter,gridType,numPartitions);
+		//objectRDD.gridRectangleRDD.persist(StorageLevel.MEMORY_ONLY());
+		JoinQuery joinQuery = new JoinQuery(sc,objectRDD,rectangleRDD);
+		for(int i=0;i<loopTimes;i++)
+		{
+
+			long resultSize = joinQuery.SpatialJoinQueryusingCartesianProduct(objectRDD,rectangleRDD).count();
+			assert resultSize>0;
+		}
+	}
+
+	public static void testSpatialKnnQueryUsingIndex() throws Exception {
+		Random random=new Random();
+		double randomNumber=random.nextInt(10)+random.nextDouble();
+		queryPoint=fact.createPoint(new Coordinate(-84.01+randomNumber, 34.01+randomNumber));
+		RectangleRDD objectRDD = new RectangleRDD(sc, inputLocation, offset, splitter);
+		objectRDD.buildIndex("rtree");
+		for(int i=0;i<loopTimes;i++)
+		{
+			List<Envelope> result = KNNQuery.SpatialKnnQueryUsingIndex(objectRDD, queryPoint, 1000);
+			assert result.size()>-1;
+		}
+	}
+
+	public static void testSpatialJoinQuery() throws Exception {
+		RectangleRDD rectangleRDD = new RectangleRDD(sc, inputLocation2, offset2, splitter2);
+		//polygonRDD.rawPolygonRDD.unpersist();
+		RectangleRDD objectRDD;
+		objectRDD = new RectangleRDD(sc, inputLocation, offset ,splitter,gridType,numPartitions);
+		objectRDD.gridRectangleRDD.persist(StorageLevel.MEMORY_ONLY());
+		JoinQuery joinQuery = new JoinQuery(sc,objectRDD,rectangleRDD);
+		for(int i=0;i<loopTimes;i++)
+		{
+
+			long resultSize = joinQuery.SpatialJoinQuery(objectRDD,rectangleRDD).count();
+			assert resultSize>0;
+		}
+	}
+
+	public static void testSpatialJoinQueryUsingIndex() throws Exception {
+		RectangleRDD rectangleRDD = new RectangleRDD(sc, inputLocation2, offset2, splitter2);
+		//polygonRDD.rawPolygonRDD.unpersist();
+		RectangleRDD objectRDD;
+		objectRDD = new RectangleRDD(sc, inputLocation, offset ,splitter,gridType,numPartitions);
+		objectRDD.buildIndex("rtree");
+		JoinQuery joinQuery = new JoinQuery(sc,objectRDD,rectangleRDD);
+		for(int i=0;i<loopTimes;i++)
+		{
+			long resultSize = joinQuery.SpatialJoinQueryUsingIndex(objectRDD,rectangleRDD).count();
+			assert resultSize>0;
+		}
+	}
+
+
+	public static void TearDown() {
+		sc.stop();
+	}
 
 }

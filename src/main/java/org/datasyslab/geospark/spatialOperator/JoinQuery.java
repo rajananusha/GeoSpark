@@ -38,6 +38,8 @@ import java.util.List;
 
 import scala.Tuple2;
 
+import static org.datasyslab.geospark.showcase.Example.sc;
+
 //todo: Replace older join query class.
 
 
@@ -331,7 +333,36 @@ public class JoinQuery implements Serializable{
        
        return joinListResultAfterAggregation;
 
-   }  
+   }
+
+    /**
+     * Spatial Join Query using cartesian product
+     * @param pointRDD
+     * @param rectangleRDD
+     * @return
+     */
+
+    public JavaPairRDD<Envelope, HashSet<Point>> SpatialJoinQueryusingCartesianProduct(PointRDD pointRDD, RectangleRDD rectangleRDD) {
+        //todo: Add logic, if this is cached, no need to calculate it again.
+
+
+        if(pointRDD.gridPointRDD == null) {
+            throw new NullPointerException("Need to do spatial partitioning first, gridedSRDD is null");
+        }
+
+        //Iterate through rectangle RDD
+        List<Envelope> L = rectangleRDD.rawRectangleRDD.collect();
+        //HashMap<Envelope,HashSet<Point>> map = new HashMap<Envelope,HashSet<Point>>();
+        List<Tuple2<Envelope,HashSet<Point>>> list=new ArrayList<Tuple2<Envelope,HashSet<Point>>>();
+        for(Envelope enve:L){
+            HashSet<Point> points=new HashSet<Point>(RangeQuery.SpatialRangeQuery(pointRDD, enve, 0).getRawPointRDD().collect());
+            //map.put(enve, points);
+            list.add(new Tuple2<Envelope,HashSet<Point>>(enve,points));
+        }
+        JavaPairRDD<Envelope,HashSet<Point>> preresult= sc.parallelizePairs(list);
+        JavaPairRDD<Envelope,HashSet<Point>> result=aggregateJoinResultPointByRectangle(preresult);
+        return result;
+    }
 
    
    
